@@ -1,0 +1,45 @@
+aegis:
+  name: "Aegis"
+  version: "0.1.0"
+
+llm:
+  ollama_base_url: http://localhost:11434
+  default_model: qwen2.5-coder:7b
+  timeout: 120
+
+services:
+  qaagent:
+    name: "QA Agent"
+    description: "Route discovery, risk analysis, test generation & orchestration"
+    url: http://localhost:8080
+    health_endpoint: /health
+    api_key_env: QAAGENT_API_KEY
+    features:
+      - Route Discovery
+      - Risk Assessment
+      - Test Generation
+      - Test Orchestration
+      - Branch Board
+
+  bugalizer:
+    name: "Bugalizer"
+    description: "AI-powered bug triage, code localization & fix proposals"
+    url: http://localhost:8090
+    health_endpoint: /health
+    api_key_env: BUGALIZER_API_KEY
+    features:
+      - Bug Triage
+      - Code Localization
+      - Duplicate Detection
+
+workflows:
+  full_pipeline:
+    name: "Full QA Pipeline"
+    steps:
+      - type: discover
+        service: qaagent
+      - type: test
+        service: qaagent
+      - type: submit_bugs
+        service: bugalizer
+        condition: has_failures
