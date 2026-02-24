@@ -5,8 +5,8 @@
 - [x] In Review
 - [x] Approved
 - [x] Implementation
-- [ ] Implementation Review
-- [ ] Complete
+- [x] Implementation Review
+- [x] Complete
 
 ## Roles
 - Lead: claude
