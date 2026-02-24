@@ -26,6 +26,8 @@ SAMPLE_CONFIG: Dict[str, Any] = {
             "health_endpoint": "/health",
             "api_key_env": "QAAGENT_API_KEY",
             "features": ["Route Discovery", "Test Generation"],
+            "repo_url": "https://github.com/jblacketter/qaagent",
+            "docs_url": "",
         },
         "bugalizer": {
             "name": "Bugalizer",
@@ -34,6 +36,8 @@ SAMPLE_CONFIG: Dict[str, Any] = {
             "health_endpoint": "/health",
             "api_key_env": "",
             "features": ["Bug Triage"],
+            "repo_url": "https://github.com/jblacketter/bugalizer",
+            "docs_url": "",
         },
     },
     "workflows": {

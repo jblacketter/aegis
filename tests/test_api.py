@@ -138,3 +138,11 @@ class TestPortfolioEndpoint:
         assert data["tagline"] == "The AI Quality Control Plane"
         assert len(data["tools"]) == 2
         assert "full_pipeline" in data["workflows"]
+
+    def test_portfolio_includes_repo_urls(self, client: TestClient):
+        resp = client.get("/api/portfolio")
+        data = resp.json()
+        tools_by_key = {t["key"]: t for t in data["tools"]}
+        assert tools_by_key["qaagent"]["repo_url"] == "https://github.com/jblacketter/qaagent"
+        assert tools_by_key["bugalizer"]["repo_url"] == "https://github.com/jblacketter/bugalizer"
+        assert "docs_url" in tools_by_key["qaagent"]

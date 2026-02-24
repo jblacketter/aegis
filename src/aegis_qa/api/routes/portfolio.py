@@ -22,6 +22,8 @@ async def portfolio() -> Dict[str, Any]:
                 "name": entry.name,
                 "description": entry.description,
                 "features": entry.features,
+                "repo_url": entry.repo_url,
+                "docs_url": entry.docs_url,
             }
         )
     return {

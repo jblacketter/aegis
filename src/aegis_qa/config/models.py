@@ -24,6 +24,8 @@ class ServiceEntry(BaseModel):
     health_endpoint: str = "/health"
     api_key_env: str = ""
     features: List[str] = Field(default_factory=list)
+    repo_url: str = ""
+    docs_url: str = ""
 
 
 class WorkflowStepDef(BaseModel):
