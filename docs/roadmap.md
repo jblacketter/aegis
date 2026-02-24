@@ -22,12 +22,12 @@ Aegis is the AI Quality Control Plane — a unified orchestration layer and port
 
 ### Phase 2: CI/CD & Engineering Maturity
 - **Status:** Planning
-- **Description:** GitHub Actions pipeline, test coverage reporting, linting, pre-commit hooks, and status badges on the README. Signals engineering discipline and production-readiness.
+- **Description:** GitHub Actions pipeline, test coverage reporting, linting, type checking, pre-commit hooks, and status badges on the README. Signals engineering discipline and production-readiness.
 - **Key Deliverables:**
-  - GitHub Actions CI pipeline (lint, test, coverage)
-  - Coverage badge on README
+  - GitHub Actions CI pipeline (lint, type check, test, coverage)
+  - CI status and coverage badges on README
   - Pre-commit hooks (ruff, mypy)
-  - Automated release workflow
+  - Ruff linting/formatting, mypy type checking (basic mode)
 
 ### Phase 3: Workflow Engine Hardening
 - **Status:** Not Started
