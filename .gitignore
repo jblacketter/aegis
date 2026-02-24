@@ -1,9 +1,43 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 *.egg-info/
+*.egg
 dist/
 build/
+*.whl
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE — JetBrains
+.idea/
+
+# IDE — VS Code
+.vscode/
+
+# IDE — Vim/misc
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Testing / Coverage
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Aegis config (user-specific)
 .aegis.yaml
-*.egg
