@@ -21,7 +21,7 @@ Aegis is the AI Quality Control Plane — a unified orchestration layer and port
   - Connection to the main portfolio site (jblacketter.github.io)
 
 ### Phase 2: CI/CD & Engineering Maturity
-- **Status:** Not Started
+- **Status:** Planning
 - **Description:** GitHub Actions pipeline, test coverage reporting, linting, pre-commit hooks, and status badges on the README. Signals engineering discipline and production-readiness.
 - **Key Deliverables:**
   - GitHub Actions CI pipeline (lint, test, coverage)
