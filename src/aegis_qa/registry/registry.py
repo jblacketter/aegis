@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Dict, List, Optional
 
 from aegis_qa.config.models import AegisConfig, ServiceEntry
 from aegis_qa.registry.health import check_all_services, check_health
@@ -15,13 +14,13 @@ class ServiceRegistry:
 
     def __init__(self, config: AegisConfig) -> None:
         self._config = config
-        self._services: Dict[str, ServiceEntry] = dict(config.services)
+        self._services: dict[str, ServiceEntry] = dict(config.services)
 
     @property
-    def service_keys(self) -> List[str]:
+    def service_keys(self) -> list[str]:
         return list(self._services.keys())
 
-    def get_entry(self, key: str) -> Optional[ServiceEntry]:
+    def get_entry(self, key: str) -> ServiceEntry | None:
         return self._services.get(key)
 
     async def check_one(self, key: str, timeout: float = 5.0) -> HealthResult:
@@ -30,12 +29,12 @@ class ServiceRegistry:
             return HealthResult(healthy=False, error=f"Unknown service: {key}")
         return await check_health(entry, timeout=timeout)
 
-    async def check_all(self, timeout: float = 5.0) -> Dict[str, HealthResult]:
+    async def check_all(self, timeout: float = 5.0) -> dict[str, HealthResult]:
         return await check_all_services(self._services, timeout=timeout)
 
-    async def get_all_statuses(self, timeout: float = 5.0) -> List[ServiceStatus]:
+    async def get_all_statuses(self, timeout: float = 5.0) -> list[ServiceStatus]:
         health_map = await self.check_all(timeout=timeout)
-        statuses: List[ServiceStatus] = []
+        statuses: list[ServiceStatus] = []
         for key, entry in self._services.items():
             statuses.append(
                 ServiceStatus(
@@ -49,5 +48,5 @@ class ServiceRegistry:
             )
         return statuses
 
-    def get_all_statuses_sync(self, timeout: float = 5.0) -> List[ServiceStatus]:
+    def get_all_statuses_sync(self, timeout: float = 5.0) -> list[ServiceStatus]:
         return asyncio.run(self.get_all_statuses(timeout=timeout))

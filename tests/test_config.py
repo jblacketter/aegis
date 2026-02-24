@@ -7,25 +7,23 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import yaml
 
-from aegis_qa.config.models import (
-    AegisConfig,
-    AegisIdentity,
-    LLMConfig,
-    ServiceEntry,
-    WorkflowDef,
-    WorkflowStepDef,
-)
 from aegis_qa.config.loader import (
     _interpolate_env,
     _interpolate_recursive,
     find_config_file,
     load_config,
 )
-
+from aegis_qa.config.models import (
+    AegisConfig,
+    LLMConfig,
+    ServiceEntry,
+    WorkflowDef,
+    WorkflowStepDef,
+)
 
 # ─── Model tests ───
+
 
 class TestLLMConfig:
     def test_defaults(self):
@@ -94,6 +92,7 @@ class TestAegisConfig:
 
 
 # ─── Loader tests ───
+
 
 class TestEnvInterpolation:
     def test_simple_var(self):
@@ -173,8 +172,7 @@ class TestLoadConfig:
     def test_env_interpolation_in_file(self, tmp_path: Path):
         config = tmp_path / ".aegis.yaml"
         config.write_text(
-            "aegis:\n  name: Aegis\n"
-            "services:\n  svc:\n    name: Svc\n    url: ${TEST_SVC_URL:-http://default:80}\n"
+            "aegis:\n  name: Aegis\nservices:\n  svc:\n    name: Svc\n    url: ${TEST_SVC_URL:-http://default:80}\n"
         )
         os.environ.pop("TEST_SVC_URL", None)
         cfg = load_config(path=config)

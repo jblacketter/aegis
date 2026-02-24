@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from aegis_qa.workflows.models import StepResult
 from aegis_qa.workflows.steps.base import BaseStep
@@ -11,7 +11,7 @@ from aegis_qa.workflows.steps.base import BaseStep
 class SubmitBugsStep(BaseStep):
     step_type = "submit_bugs"
 
-    async def execute(self, context: Dict[str, Any]) -> StepResult:
+    async def execute(self, context: dict[str, Any]) -> StepResult:
         failures = self._collect_failures(context)
         if not failures:
             return StepResult(
@@ -37,9 +37,9 @@ class SubmitBugsStep(BaseStep):
                 error=str(exc),
             )
 
-    def _collect_failures(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _collect_failures(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         """Gather failures from prior step results stored in context."""
-        failures: List[Dict[str, Any]] = []
+        failures: list[dict[str, Any]] = []
         for step_result in context.get("step_results", []):
             if isinstance(step_result, StepResult):
                 failures.extend(step_result.data.get("failures", []))

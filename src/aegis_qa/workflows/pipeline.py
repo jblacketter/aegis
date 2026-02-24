@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
-from aegis_qa.config.models import AegisConfig, WorkflowDef
+from aegis_qa.config.models import AegisConfig
 from aegis_qa.registry.registry import ServiceRegistry
 from aegis_qa.workflows.models import StepResult, WorkflowResult
 
@@ -19,16 +19,13 @@ class PipelineRunner:
         self._config = config
         self._registry = ServiceRegistry(config)
 
-    def _should_skip(self, condition: Optional[str], context: Dict[str, Any]) -> bool:
+    def _should_skip(self, condition: str | None, context: dict[str, Any]) -> bool:
         """Evaluate a step condition. Returns True if the step should be skipped."""
         if condition is None:
             return False
         if condition == "has_failures":
             step_results = context.get("step_results", [])
-            return not any(
-                isinstance(sr, StepResult) and sr.has_failures
-                for sr in step_results
-            )
+            return not any(isinstance(sr, StepResult) and sr.has_failures for sr in step_results)
         logger.warning("Unknown condition %r — running step anyway", condition)
         return False
 
@@ -49,7 +46,7 @@ class PipelineRunner:
             )
 
         result = WorkflowResult(workflow_name=workflow_name)
-        context: Dict[str, Any] = {"step_results": []}
+        context: dict[str, Any] = {"step_results": []}
 
         for step_def in workflow.steps:
             if self._should_skip(step_def.condition, context):

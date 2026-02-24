@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -114,7 +113,7 @@ app.add_typer(config_app)
 
 @config_app.command("show")
 def config_show(
-    path: Optional[Path] = typer.Option(None, "--path", "-p", help="Path to .aegis.yaml"),
+    path: Path | None = typer.Option(None, "--path", "-p", help="Path to .aegis.yaml"),
 ) -> None:
     """Print resolved configuration."""
     from aegis_qa.config.loader import load_config
@@ -141,7 +140,7 @@ def config_show(
         if entry.features:
             console.print(f"    Features: {', '.join(entry.features)}")
 
-    console.print(f"\n[bold]Workflows:[/bold]")
+    console.print("\n[bold]Workflows:[/bold]")
     for key, wf in config.workflows.items():
         steps = " → ".join(s.type for s in wf.steps)
         console.print(f"  {key}: {wf.name} [{steps}]")

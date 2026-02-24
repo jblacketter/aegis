@@ -2,9 +2,9 @@
 
 ## Status
 - [x] Planning
-- [ ] In Review
-- [ ] Approved
-- [ ] Implementation
+- [x] In Review
+- [x] Approved
+- [x] Implementation
 - [ ] Implementation Review
 - [ ] Complete
 

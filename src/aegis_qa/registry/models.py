@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -11,9 +10,9 @@ class HealthResult:
     """Result of a single health check."""
 
     healthy: bool
-    status_code: Optional[int] = None
+    status_code: int | None = None
     latency_ms: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
@@ -25,7 +24,7 @@ class ServiceStatus:
     description: str
     url: str
     features: list[str] = field(default_factory=list)
-    health: Optional[HealthResult] = None
+    health: HealthResult | None = None
 
     @property
     def status_label(self) -> str:

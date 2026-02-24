@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import ValidationError
@@ -41,7 +41,7 @@ def _interpolate_recursive(data: Any) -> Any:
     return data
 
 
-def find_config_file(start: Optional[Path] = None) -> Optional[Path]:
+def find_config_file(start: Path | None = None) -> Path | None:
     """Walk up from *start* (default cwd) looking for .aegis.yaml."""
     current = (start or Path.cwd()).resolve()
     for ancestor in [current, *current.parents]:
@@ -51,13 +51,12 @@ def find_config_file(start: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def load_config(path: Optional[Path] = None) -> AegisConfig:
+def load_config(path: Path | None = None) -> AegisConfig:
     """Load and validate .aegis.yaml, applying env-var interpolation."""
     config_path = path or find_config_file()
     if not config_path or not config_path.exists():
         raise FileNotFoundError(
-            f"Could not find {CONFIG_FILENAME}. "
-            "Create one from .aegis.yaml.example or specify a path."
+            f"Could not find {CONFIG_FILENAME}. Create one from .aegis.yaml.example or specify a path."
         )
     with config_path.open("r", encoding="utf-8") as fh:
         raw = yaml.safe_load(fh) or {}

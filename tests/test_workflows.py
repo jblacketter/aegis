@@ -10,12 +10,12 @@ from aegis_qa.config.models import AegisConfig, ServiceEntry, WorkflowDef, Workf
 from aegis_qa.workflows.models import StepResult, WorkflowResult
 from aegis_qa.workflows.pipeline import PipelineRunner
 from aegis_qa.workflows.steps.discover import DiscoverStep
-from aegis_qa.workflows.steps.test import RunTestsStep
 from aegis_qa.workflows.steps.submit_bugs import SubmitBugsStep
+from aegis_qa.workflows.steps.test import RunTestsStep
 from aegis_qa.workflows.steps.verify import VerifyStep
 
-
 # ─── StepResult / WorkflowResult tests ───
+
 
 class TestStepResult:
     def test_success_no_failures(self):
@@ -65,6 +65,7 @@ class TestWorkflowResult:
 
 # ─── Step tests ───
 
+
 class TestDiscoverStep:
     @pytest.mark.asyncio
     async def test_success(self):
@@ -94,7 +95,9 @@ class TestRunTestsStep:
         step = RunTestsStep(entry)
         with patch.object(step, "_post", new_callable=AsyncMock) as mock_post:
             mock_post.return_value = {
-                "total": 10, "passed": 8, "failed": 2,
+                "total": 10,
+                "passed": 8,
+                "failed": 2,
                 "failures": [{"test": "test_a"}, {"test": "test_b"}],
             }
             result = await step.execute({})
@@ -126,7 +129,9 @@ class TestSubmitBugsStep:
         entry = ServiceEntry(name="Bug", url="http://localhost:8090")
         step = SubmitBugsStep(entry)
         prior = StepResult(
-            step_type="test", service="QA", success=True,
+            step_type="test",
+            service="QA",
+            success=True,
             data={"failures": [{"test": "test_a"}]},
         )
         with patch.object(step, "_post", new_callable=AsyncMock) as mock_post:
@@ -148,6 +153,7 @@ class TestVerifyStep:
 
 # ─── PipelineRunner tests ───
 
+
 class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_unknown_workflow(self, sample_config: AegisConfig):
@@ -159,14 +165,20 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_full_pipeline_no_failures(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
-        with patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", new_callable=AsyncMock) as mock_disc, \
-             patch("aegis_qa.workflows.steps.test.RunTestsStep.execute", new_callable=AsyncMock) as mock_test:
+        with (
+            patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", new_callable=AsyncMock) as mock_disc,
+            patch("aegis_qa.workflows.steps.test.RunTestsStep.execute", new_callable=AsyncMock) as mock_test,
+        ):
             mock_disc.return_value = StepResult(
-                step_type="discover", service="QA Agent", success=True,
+                step_type="discover",
+                service="QA Agent",
+                success=True,
                 data={"routes": ["/api/x"], "route_count": 1},
             )
             mock_test.return_value = StepResult(
-                step_type="test", service="QA Agent", success=True,
+                step_type="test",
+                service="QA Agent",
+                success=True,
                 data={"total": 5, "passed": 5, "failed": 0, "failures": []},
             )
             result = await runner.run("full_pipeline")
@@ -179,19 +191,27 @@ class TestPipelineRunner:
     @pytest.mark.asyncio
     async def test_full_pipeline_with_failures(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
-        with patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", new_callable=AsyncMock) as mock_disc, \
-             patch("aegis_qa.workflows.steps.test.RunTestsStep.execute", new_callable=AsyncMock) as mock_test, \
-             patch("aegis_qa.workflows.steps.submit_bugs.SubmitBugsStep.execute", new_callable=AsyncMock) as mock_sub:
+        with (
+            patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", new_callable=AsyncMock) as mock_disc,
+            patch("aegis_qa.workflows.steps.test.RunTestsStep.execute", new_callable=AsyncMock) as mock_test,
+            patch("aegis_qa.workflows.steps.submit_bugs.SubmitBugsStep.execute", new_callable=AsyncMock) as mock_sub,
+        ):
             mock_disc.return_value = StepResult(
-                step_type="discover", service="QA Agent", success=True,
+                step_type="discover",
+                service="QA Agent",
+                success=True,
                 data={"routes": ["/api/x"], "route_count": 1},
             )
             mock_test.return_value = StepResult(
-                step_type="test", service="QA Agent", success=True,
+                step_type="test",
+                service="QA Agent",
+                success=True,
                 data={"total": 5, "passed": 3, "failed": 2, "failures": [{"t": "a"}, {"t": "b"}]},
             )
             mock_sub.return_value = StepResult(
-                step_type="submit_bugs", service="Bugalizer", success=True,
+                step_type="submit_bugs",
+                service="Bugalizer",
+                success=True,
                 data={"submitted": 2},
             )
             result = await runner.run("full_pipeline")
@@ -232,16 +252,14 @@ class TestConditionEvaluation:
 
     def test_has_failures_true(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
-        ctx = {"step_results": [
-            StepResult(step_type="test", service="qa", success=True, data={"failures": [{"x": 1}]})
-        ]}
+        ctx = {
+            "step_results": [StepResult(step_type="test", service="qa", success=True, data={"failures": [{"x": 1}]})]
+        }
         assert not runner._should_skip("has_failures", ctx)
 
     def test_has_failures_false(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
-        ctx = {"step_results": [
-            StepResult(step_type="test", service="qa", success=True, data={"failures": []})
-        ]}
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=True, data={"failures": []})]}
         assert runner._should_skip("has_failures", ctx)
 
     def test_unknown_condition(self, sample_config: AegisConfig):

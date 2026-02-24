@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from aegis_qa.api.app import create_app
 from aegis_qa.config.models import AegisConfig
 from aegis_qa.registry.models import HealthResult, ServiceStatus
 from aegis_qa.workflows.models import StepResult, WorkflowResult
@@ -17,13 +15,16 @@ from aegis_qa.workflows.models import StepResult, WorkflowResult
 @pytest.fixture()
 def app(sample_config: AegisConfig):
     """Create a test app with mocked config loading."""
-    with patch("aegis_qa.api.routes.health.load_config", return_value=sample_config), \
-         patch("aegis_qa.api.routes.workflows.load_config", return_value=sample_config), \
-         patch("aegis_qa.api.routes.portfolio.load_config", return_value=sample_config):
+    with (
+        patch("aegis_qa.api.routes.health.load_config", return_value=sample_config),
+        patch("aegis_qa.api.routes.workflows.load_config", return_value=sample_config),
+        patch("aegis_qa.api.routes.portfolio.load_config", return_value=sample_config),
+    ):
         # Create app without static files mount (no landing dir in test)
         from fastapi import FastAPI
         from fastapi.middleware.cors import CORSMiddleware
-        from aegis_qa.api.routes import health, workflows, portfolio
+
+        from aegis_qa.api.routes import health, portfolio, workflows
 
         test_app = FastAPI(title="Aegis Test")
         test_app.add_middleware(
@@ -50,6 +51,7 @@ def client(app) -> TestClient:
 
 # ─── Health endpoint ───
 
+
 class TestHealthEndpoint:
     def test_health(self, client: TestClient):
         resp = client.get("/health")
@@ -59,22 +61,31 @@ class TestHealthEndpoint:
 
 # ─── Services endpoints ───
 
+
 class TestServicesEndpoints:
     def test_list_services(self, client: TestClient, sample_config: AegisConfig):
         with patch("aegis_qa.api.routes.health._get_registry") as mock_reg:
             mock_instance = mock_reg.return_value
-            mock_instance.get_all_statuses = AsyncMock(return_value=[
-                ServiceStatus(
-                    key="qaagent", name="QA Agent", description="Test gen",
-                    url="http://localhost:8080", features=["Route Discovery"],
-                    health=HealthResult(healthy=True, status_code=200, latency_ms=12.5),
-                ),
-                ServiceStatus(
-                    key="bugalizer", name="Bugalizer", description="Bug triage",
-                    url="http://localhost:8090", features=["Bug Triage"],
-                    health=HealthResult(healthy=False, error="Connection refused: connect"),
-                ),
-            ])
+            mock_instance.get_all_statuses = AsyncMock(
+                return_value=[
+                    ServiceStatus(
+                        key="qaagent",
+                        name="QA Agent",
+                        description="Test gen",
+                        url="http://localhost:8080",
+                        features=["Route Discovery"],
+                        health=HealthResult(healthy=True, status_code=200, latency_ms=12.5),
+                    ),
+                    ServiceStatus(
+                        key="bugalizer",
+                        name="Bugalizer",
+                        description="Bug triage",
+                        url="http://localhost:8090",
+                        features=["Bug Triage"],
+                        health=HealthResult(healthy=False, error="Connection refused: connect"),
+                    ),
+                ]
+            )
             resp = client.get("/api/services")
             assert resp.status_code == 200
             data = resp.json()
@@ -105,6 +116,7 @@ class TestServicesEndpoints:
 
 # ─── Workflow endpoint ───
 
+
 class TestWorkflowEndpoint:
     def test_run_known_workflow(self, client: TestClient, sample_config: AegisConfig):
         mock_result = WorkflowResult(
@@ -128,6 +140,7 @@ class TestWorkflowEndpoint:
 
 
 # ─── Portfolio endpoint ───
+
 
 class TestPortfolioEndpoint:
     def test_portfolio(self, client: TestClient):

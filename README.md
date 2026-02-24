@@ -1,5 +1,7 @@
 # Aegis
 
+[![CI](https://github.com/jblacketter/aegis/actions/workflows/ci.yml/badge.svg)](https://github.com/jblacketter/aegis/actions/workflows/ci.yml)
+
 **The AI Quality Control Plane**
 
 Aegis is a lightweight orchestration layer that unifies AI-powered QA tools into a single control plane. It coordinates route discovery, test generation, bug triage, and fix proposals across your development workflow.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter
 
@@ -12,9 +12,9 @@ router = APIRouter(tags=["portfolio"])
 
 
 @router.get("/portfolio")
-async def portfolio() -> Dict[str, Any]:
+async def portfolio() -> dict[str, Any]:
     config = load_config()
-    tools: List[Dict[str, Any]] = []
+    tools: list[dict[str, Any]] = []
     for key, entry in config.services.items():
         tools.append(
             {

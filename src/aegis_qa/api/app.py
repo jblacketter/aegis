@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from aegis_qa.api.routes import health, workflows, portfolio
+from aegis_qa.api.routes import health, portfolio, workflows
 
 
 def create_app() -> FastAPI:

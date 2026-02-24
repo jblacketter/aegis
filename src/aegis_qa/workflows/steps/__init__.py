@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Dict, Type
-
+from aegis_qa.workflows.steps.base import BaseStep
 from aegis_qa.workflows.steps.discover import DiscoverStep
-from aegis_qa.workflows.steps.test import RunTestsStep
 from aegis_qa.workflows.steps.submit_bugs import SubmitBugsStep
+from aegis_qa.workflows.steps.test import RunTestsStep
 from aegis_qa.workflows.steps.verify import VerifyStep
 
-from aegis_qa.workflows.steps.base import BaseStep
-
-STEP_REGISTRY: Dict[str, Type[BaseStep]] = {
+STEP_REGISTRY: dict[str, type[BaseStep]] = {
     "discover": DiscoverStep,
     "test": RunTestsStep,
     "submit_bugs": SubmitBugsStep,

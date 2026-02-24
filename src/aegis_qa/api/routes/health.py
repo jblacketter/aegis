@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
@@ -18,7 +18,7 @@ def _get_registry() -> ServiceRegistry:
 
 
 @router.get("/services")
-async def list_services() -> List[Dict[str, Any]]:
+async def list_services() -> list[dict[str, Any]]:
     registry = _get_registry()
     statuses = await registry.get_all_statuses(timeout=5.0)
     return [
@@ -36,7 +36,7 @@ async def list_services() -> List[Dict[str, Any]]:
 
 
 @router.get("/services/{name}/health")
-async def service_health(name: str) -> Dict[str, Any]:
+async def service_health(name: str) -> dict[str, Any]:
     registry = _get_registry()
     entry = registry.get_entry(name)
     if entry is None:

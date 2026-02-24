@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -23,7 +21,7 @@ class ServiceEntry(BaseModel):
     url: str
     health_endpoint: str = "/health"
     api_key_env: str = ""
-    features: List[str] = Field(default_factory=list)
+    features: list[str] = Field(default_factory=list)
     repo_url: str = ""
     docs_url: str = ""
 
@@ -33,14 +31,14 @@ class WorkflowStepDef(BaseModel):
 
     type: str
     service: str
-    condition: Optional[str] = None
+    condition: str | None = None
 
 
 class WorkflowDef(BaseModel):
     """A named workflow pipeline definition."""
 
     name: str
-    steps: List[WorkflowStepDef] = Field(default_factory=list)
+    steps: list[WorkflowStepDef] = Field(default_factory=list)
 
 
 class AegisIdentity(BaseModel):
@@ -55,5 +53,5 @@ class AegisConfig(BaseModel):
 
     aegis: AegisIdentity = Field(default_factory=AegisIdentity)
     llm: LLMConfig = Field(default_factory=LLMConfig)
-    services: Dict[str, ServiceEntry] = Field(default_factory=dict)
-    workflows: Dict[str, WorkflowDef] = Field(default_factory=dict)
+    services: dict[str, ServiceEntry] = Field(default_factory=dict)
+    workflows: dict[str, WorkflowDef] = Field(default_factory=dict)

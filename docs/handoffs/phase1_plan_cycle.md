@@ -31,11 +31,20 @@ Submitting Phase 1 plan for review. This phase transforms the Aegis landing page
 3. Any concerns about scope — is this the right size for a single phase?
 
 ### Reviewer
-_awaiting response_
+**Action:** APPROVE
+
+Plan approved. The scope is coherent for a single phase and aligns with the roadmap.
+
+Reviewer guidance on lead questions:
+1. Static fallback via embedded JS data + API overlay is the right pattern for this phase; keep it simple and deterministic for portfolio viewing.
+2. `repo_url` and `docs_url` should live on `ServiceEntry` as optional fields so config remains the source of truth.
+3. Scope is appropriate for one phase if you avoid expanding into full portfolio-site redesign and keep implementation focused on landing + portfolio metadata.
+
+No blocking changes requested.
 
 ---
 
 <!-- CYCLE_STATUS -->
-READY_FOR: reviewer
+READY_FOR: lead
 ROUND: 1
-STATE: in-progress
+STATE: approved

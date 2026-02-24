@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aegis_qa.workflows.models import StepResult
 from aegis_qa.workflows.steps.base import BaseStep
@@ -11,7 +11,7 @@ from aegis_qa.workflows.steps.base import BaseStep
 class DiscoverStep(BaseStep):
     step_type = "discover"
 
-    async def execute(self, context: Dict[str, Any]) -> StepResult:
+    async def execute(self, context: dict[str, Any]) -> StepResult:
         try:
             data = await self._get("/api/routes")
             routes = data.get("routes", [])

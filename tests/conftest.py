@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 import yaml
 
 from aegis_qa.config.models import AegisConfig
 
-
-SAMPLE_CONFIG: Dict[str, Any] = {
+SAMPLE_CONFIG: dict[str, Any] = {
     "aegis": {"name": "Aegis", "version": "0.1.0"},
     "llm": {
         "ollama_base_url": "http://localhost:11434",
@@ -60,7 +59,7 @@ def sample_config() -> AegisConfig:
 
 
 @pytest.fixture()
-def sample_config_dict() -> Dict[str, Any]:
+def sample_config_dict() -> dict[str, Any]:
     """Return raw sample config dict."""
     return dict(SAMPLE_CONFIG)
 

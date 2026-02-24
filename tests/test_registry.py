@@ -12,8 +12,8 @@ from aegis_qa.registry.health import check_all_services, check_health
 from aegis_qa.registry.models import HealthResult, ServiceStatus
 from aegis_qa.registry.registry import ServiceRegistry
 
-
 # ─── HealthResult tests ───
+
 
 class TestHealthResult:
     def test_healthy(self):
@@ -29,21 +29,30 @@ class TestHealthResult:
 class TestServiceStatus:
     def test_status_label_healthy(self):
         s = ServiceStatus(
-            key="qa", name="QA", description="", url="http://x",
+            key="qa",
+            name="QA",
+            description="",
+            url="http://x",
             health=HealthResult(healthy=True, status_code=200),
         )
         assert s.status_label == "healthy"
 
     def test_status_label_unreachable(self):
         s = ServiceStatus(
-            key="qa", name="QA", description="", url="http://x",
+            key="qa",
+            name="QA",
+            description="",
+            url="http://x",
             health=HealthResult(healthy=False, error="Connection refused: connect error"),
         )
         assert s.status_label == "unreachable"
 
     def test_status_label_unhealthy(self):
         s = ServiceStatus(
-            key="qa", name="QA", description="", url="http://x",
+            key="qa",
+            name="QA",
+            description="",
+            url="http://x",
             health=HealthResult(healthy=False, status_code=500, error="Server error"),
         )
         assert s.status_label == "unhealthy"
@@ -54,6 +63,7 @@ class TestServiceStatus:
 
 
 # ─── check_health tests ───
+
 
 class TestCheckHealth:
     @pytest.mark.asyncio
@@ -117,6 +127,7 @@ class TestCheckHealth:
 
 # ─── check_all_services tests ───
 
+
 class TestCheckAllServices:
     @pytest.mark.asyncio
     async def test_concurrent_checks(self):
@@ -133,6 +144,7 @@ class TestCheckAllServices:
 
 
 # ─── ServiceRegistry tests ───
+
 
 class TestServiceRegistry:
     def test_service_keys(self, sample_config: AegisConfig):

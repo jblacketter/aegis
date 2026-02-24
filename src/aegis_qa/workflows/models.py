@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -13,8 +13,8 @@ class StepResult:
     step_type: str
     service: str
     success: bool
-    data: Dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
+    data: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
     skipped: bool = False
 
     @property
@@ -31,7 +31,7 @@ class WorkflowResult:
     """Result of a full workflow execution."""
 
     workflow_name: str
-    steps: List[StepResult] = field(default_factory=list)
+    steps: list[StepResult] = field(default_factory=list)
 
     @property
     def success(self) -> bool:
@@ -41,7 +41,7 @@ class WorkflowResult:
     def has_failures(self) -> bool:
         return any(s.has_failures for s in self.steps)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "workflow_name": self.workflow_name,
             "success": self.success,

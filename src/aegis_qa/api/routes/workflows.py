@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
@@ -13,7 +13,7 @@ router = APIRouter(tags=["workflows"])
 
 
 @router.post("/workflows/{name}/run")
-async def run_workflow(name: str) -> Dict[str, Any]:
+async def run_workflow(name: str) -> dict[str, Any]:
     config = load_config()
     if name not in config.workflows:
         raise HTTPException(status_code=404, detail=f"Unknown workflow: {name}")

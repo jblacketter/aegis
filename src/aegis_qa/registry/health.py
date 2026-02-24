@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Dict
 
 import httpx
 
@@ -49,18 +48,15 @@ async def check_health(entry: ServiceEntry, timeout: float = 5.0) -> HealthResul
 
 
 async def check_all_services(
-    services: Dict[str, ServiceEntry],
+    services: dict[str, ServiceEntry],
     timeout: float = 5.0,
-) -> Dict[str, HealthResult]:
+) -> dict[str, HealthResult]:
     """Run health checks for all services concurrently."""
-    tasks = {
-        key: check_health(entry, timeout=timeout)
-        for key, entry in services.items()
-    }
+    tasks = {key: check_health(entry, timeout=timeout) for key, entry in services.items()}
     results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-    out: Dict[str, HealthResult] = {}
+    out: dict[str, HealthResult] = {}
     for key, result in zip(tasks.keys(), results):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             out[key] = HealthResult(healthy=False, error=str(result))
         else:
             out[key] = result
