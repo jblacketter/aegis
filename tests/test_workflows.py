@@ -1,12 +1,14 @@
-"""Tests for workflow engine — pipeline runner and steps."""
+"""Tests for workflow engine — pipeline runner, steps, retry, parallel, conditions, history."""
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from aegis_qa.config.models import AegisConfig, ServiceEntry, WorkflowDef, WorkflowStepDef
+from aegis_qa.workflows.history import ExecutionHistory
 from aegis_qa.workflows.models import StepResult, WorkflowResult
 from aegis_qa.workflows.pipeline import PipelineRunner
 from aegis_qa.workflows.steps.discover import DiscoverStep
@@ -29,6 +31,14 @@ class TestStepResult:
     def test_failed_step(self):
         r = StepResult(step_type="test", service="qa", success=False, error="crash")
         assert r.has_failures
+
+    def test_duration_ms_default(self):
+        r = StepResult(step_type="test", service="qa", success=True)
+        assert r.duration_ms is None
+
+    def test_attempts_default(self):
+        r = StepResult(step_type="test", service="qa", success=True)
+        assert r.attempts == []
 
 
 class TestWorkflowResult:
@@ -55,12 +65,14 @@ class TestWorkflowResult:
     def test_to_dict(self):
         wr = WorkflowResult(
             workflow_name="pipe",
-            steps=[StepResult(step_type="a", service="s", success=True)],
+            steps=[StepResult(step_type="a", service="s", success=True, duration_ms=12.5)],
         )
         d = wr.to_dict()
         assert d["workflow_name"] == "pipe"
         assert d["success"] is True
         assert len(d["steps"]) == 1
+        assert d["steps"][0]["duration_ms"] == 12.5
+        assert d["steps"][0]["attempts"] == []
 
 
 # ─── Step tests ───
@@ -143,12 +155,31 @@ class TestSubmitBugsStep:
 
 class TestVerifyStep:
     @pytest.mark.asyncio
-    async def test_placeholder(self):
+    async def test_success(self):
         entry = ServiceEntry(name="QA", url="http://localhost:8080")
         step = VerifyStep(entry)
-        result = await step.execute({})
-        assert result.success
-        assert result.skipped
+        with patch.object(step, "_post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = {
+                "total": 5,
+                "passed": 5,
+                "failed": 0,
+                "failures": [],
+            }
+            result = await step.execute({})
+            assert result.success
+            assert result.data["verify_only"] is True
+            assert result.data["failed"] == 0
+            mock_post.assert_called_once_with("/api/runs", payload={"verify_only": True})
+
+    @pytest.mark.asyncio
+    async def test_failure(self):
+        entry = ServiceEntry(name="QA", url="http://localhost:8080")
+        step = VerifyStep(entry)
+        with patch.object(step, "_post", new_callable=AsyncMock) as mock_post:
+            mock_post.side_effect = Exception("Connection refused")
+            result = await step.execute({})
+            assert not result.success
+            assert "Connection refused" in result.error
 
 
 # ─── PipelineRunner tests ───
@@ -245,6 +276,9 @@ class TestPipelineRunner:
         assert "Unknown step type" in result.steps[0].error
 
 
+# ─── Condition evaluator tests ───
+
+
 class TestConditionEvaluation:
     def test_no_condition(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
@@ -265,3 +299,302 @@ class TestConditionEvaluation:
     def test_unknown_condition(self, sample_config: AegisConfig):
         runner = PipelineRunner(sample_config)
         assert not runner._should_skip("something_else", {})
+
+    def test_on_success_true(self, sample_config: AegisConfig):
+        runner = PipelineRunner(sample_config)
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=True)]}
+        assert not runner._should_skip("on_success", ctx)
+
+    def test_on_success_false(self, sample_config: AegisConfig):
+        runner = PipelineRunner(sample_config)
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=False, error="err")]}
+        assert runner._should_skip("on_success", ctx)
+
+    def test_on_failure_true(self, sample_config: AegisConfig):
+        runner = PipelineRunner(sample_config)
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=False, error="err")]}
+        assert not runner._should_skip("on_failure", ctx)
+
+    def test_on_failure_false(self, sample_config: AegisConfig):
+        runner = PipelineRunner(sample_config)
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=True)]}
+        assert runner._should_skip("on_failure", ctx)
+
+    def test_always(self, sample_config: AegisConfig):
+        runner = PipelineRunner(sample_config)
+        assert not runner._should_skip("always", {})
+        ctx = {"step_results": [StepResult(step_type="test", service="qa", success=True)]}
+        assert not runner._should_skip("always", ctx)
+
+
+# ─── Retry tests ───
+
+
+class TestRetry:
+    @pytest.mark.asyncio
+    async def test_retry_on_failure(self):
+        """Step retries the configured number of times on failure."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "retry_test": WorkflowDef(
+                    name="Retry Test",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent", retries=2, retry_delay=0.01)],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+
+        call_count = 0
+
+        async def mock_execute(context):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                return StepResult(step_type="discover", service="QA", success=False, error="fail")
+            return StepResult(step_type="discover", service="QA", success=True, data={"routes": []})
+
+        with patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", side_effect=mock_execute):
+            result = await runner.run("retry_test")
+            assert result.success
+            assert call_count == 3
+            assert len(result.steps[0].attempts) == 3
+
+    @pytest.mark.asyncio
+    async def test_no_retry_on_success(self):
+        """Step does not retry when it succeeds on first attempt."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "no_retry": WorkflowDef(
+                    name="No Retry",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent", retries=3, retry_delay=0.01)],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+        with patch(
+            "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+            new_callable=AsyncMock,
+            return_value=StepResult(step_type="discover", service="QA", success=True),
+        ):
+            result = await runner.run("no_retry")
+            assert result.success
+            assert len(result.steps[0].attempts) == 1
+
+    @pytest.mark.asyncio
+    async def test_retry_exhausted(self):
+        """Step fails after exhausting all retries."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "exhaust": WorkflowDef(
+                    name="Exhaust",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent", retries=1, retry_delay=0.01)],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+        with patch(
+            "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+            new_callable=AsyncMock,
+            return_value=StepResult(step_type="discover", service="QA", success=False, error="down"),
+        ):
+            result = await runner.run("exhaust")
+            assert not result.success
+            assert len(result.steps[0].attempts) == 2  # 1 initial + 1 retry
+
+
+# ─── Timeout tests ───
+
+
+class TestTimeout:
+    @pytest.mark.asyncio
+    async def test_step_timeout(self):
+        """Step that exceeds timeout gets a timeout error."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "timeout_test": WorkflowDef(
+                    name="Timeout Test",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent", timeout=0.05)],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+
+        async def slow_execute(context):
+            await asyncio.sleep(1.0)
+            return StepResult(step_type="discover", service="QA", success=True)
+
+        with patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", side_effect=slow_execute):
+            result = await runner.run("timeout_test")
+            assert not result.success
+            assert "timed out" in result.steps[0].error
+
+
+# ─── Parallel execution tests ───
+
+
+class TestParallel:
+    @pytest.mark.asyncio
+    async def test_parallel_steps_run_concurrently(self):
+        """Consecutive parallel steps execute concurrently via asyncio.gather()."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "parallel_test": WorkflowDef(
+                    name="Parallel Test",
+                    steps=[
+                        WorkflowStepDef(type="discover", service="qaagent", parallel=True),
+                        WorkflowStepDef(type="test", service="qaagent", parallel=True),
+                    ],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+
+        async def mock_discover(context):
+            await asyncio.sleep(0.05)
+            return StepResult(step_type="discover", service="QA", success=True, data={"routes": []})
+
+        async def mock_test(context):
+            await asyncio.sleep(0.05)
+            return StepResult(step_type="test", service="QA", success=True, data={"failures": []})
+
+        with (
+            patch("aegis_qa.workflows.steps.discover.DiscoverStep.execute", side_effect=mock_discover),
+            patch("aegis_qa.workflows.steps.test.RunTestsStep.execute", side_effect=mock_test),
+        ):
+            result = await runner.run("parallel_test")
+            assert result.success
+            assert len(result.steps) == 2
+            # Both steps should have duration_ms set
+            assert all(s.duration_ms is not None for s in result.steps)
+
+    @pytest.mark.asyncio
+    async def test_mixed_sequential_and_parallel(self):
+        """Sequential steps flush parallel batches."""
+        config = AegisConfig(
+            services={
+                "qaagent": ServiceEntry(name="QA", url="http://localhost:8080"),
+                "bugalizer": ServiceEntry(name="Bug", url="http://localhost:8090"),
+            },
+            workflows={
+                "mixed": WorkflowDef(
+                    name="Mixed",
+                    steps=[
+                        WorkflowStepDef(type="discover", service="qaagent", parallel=True),
+                        WorkflowStepDef(type="test", service="qaagent", parallel=True),
+                        WorkflowStepDef(type="submit_bugs", service="bugalizer"),  # sequential — flushes batch
+                    ],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+        with (
+            patch(
+                "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+                new_callable=AsyncMock,
+                return_value=StepResult(step_type="discover", service="QA", success=True),
+            ),
+            patch(
+                "aegis_qa.workflows.steps.test.RunTestsStep.execute",
+                new_callable=AsyncMock,
+                return_value=StepResult(step_type="test", service="QA", success=True, data={"failures": []}),
+            ),
+            patch(
+                "aegis_qa.workflows.steps.submit_bugs.SubmitBugsStep.execute",
+                new_callable=AsyncMock,
+                return_value=StepResult(step_type="submit_bugs", service="Bug", success=True, data={"submitted": 0}),
+            ),
+        ):
+            result = await runner.run("mixed")
+            assert result.success
+            assert len(result.steps) == 3
+            assert result.steps[0].step_type == "discover"
+            assert result.steps[1].step_type == "test"
+            assert result.steps[2].step_type == "submit_bugs"
+
+
+# ─── Execution history tests ───
+
+
+class TestExecutionHistory:
+    @pytest.mark.asyncio
+    async def test_history_recorded(self):
+        """PipelineRunner records execution to history when provided."""
+        history = ExecutionHistory()
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "hist_test": WorkflowDef(
+                    name="History Test",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent")],
+                )
+            },
+        )
+        runner = PipelineRunner(config, history=history)
+        with patch(
+            "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+            new_callable=AsyncMock,
+            return_value=StepResult(step_type="discover", service="QA", success=True),
+        ):
+            await runner.run("hist_test")
+
+        records = await history.get_history("hist_test")
+        assert len(records) == 1
+        assert records[0].workflow_name == "hist_test"
+        assert records[0].success is True
+        assert records[0].completed_at is not None
+        assert len(records[0].steps) == 1
+
+    @pytest.mark.asyncio
+    async def test_no_history_when_not_provided(self):
+        """PipelineRunner works fine without a history instance."""
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "no_hist": WorkflowDef(
+                    name="No History",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent")],
+                )
+            },
+        )
+        runner = PipelineRunner(config)
+        with patch(
+            "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+            new_callable=AsyncMock,
+            return_value=StepResult(step_type="discover", service="QA", success=True),
+        ):
+            result = await runner.run("no_hist")
+            assert result.success
+
+    @pytest.mark.asyncio
+    async def test_history_to_dict(self):
+        """ExecutionRecord.to_dict() produces valid serialization."""
+        history = ExecutionHistory()
+        config = AegisConfig(
+            services={"qaagent": ServiceEntry(name="QA", url="http://localhost:8080")},
+            workflows={
+                "dict_test": WorkflowDef(
+                    name="Dict Test",
+                    steps=[WorkflowStepDef(type="discover", service="qaagent")],
+                )
+            },
+        )
+        runner = PipelineRunner(config, history=history)
+        with patch(
+            "aegis_qa.workflows.steps.discover.DiscoverStep.execute",
+            new_callable=AsyncMock,
+            return_value=StepResult(step_type="discover", service="QA", success=True),
+        ):
+            await runner.run("dict_test")
+
+        records = await history.get_history("dict_test")
+        d = records[0].to_dict()
+        assert "workflow_name" in d
+        assert "started_at" in d
+        assert "completed_at" in d
+        assert "steps" in d
+        assert d["steps"][0]["step_type"] == "discover"

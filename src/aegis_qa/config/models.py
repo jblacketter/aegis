@@ -32,6 +32,10 @@ class WorkflowStepDef(BaseModel):
     type: str
     service: str
     condition: str | None = None
+    parallel: bool = False
+    retries: int = 0
+    retry_delay: float = 1.0
+    timeout: float = 30.0
 
 
 class WorkflowDef(BaseModel):
@@ -48,6 +52,20 @@ class AegisIdentity(BaseModel):
     version: str = "0.1.0"
 
 
+class AuthConfig(BaseModel):
+    """Authentication configuration."""
+
+    api_key: str = ""  # empty = auth disabled
+
+
+class WebhookConfig(BaseModel):
+    """Configuration for a single webhook endpoint."""
+
+    url: str
+    events: list[str] = Field(default_factory=lambda: ["workflow.completed"])
+    secret: str = ""  # HMAC signing key, supports ${ENV_VAR}
+
+
 class AegisConfig(BaseModel):
     """Root configuration model for .aegis.yaml."""
 
@@ -55,3 +73,8 @@ class AegisConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     services: dict[str, ServiceEntry] = Field(default_factory=dict)
     workflows: dict[str, WorkflowDef] = Field(default_factory=dict)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
+    history_db_path: str = "aegis_history.db"
+    history_max_records: int = 0  # 0 = unlimited
+    webhooks: list[WebhookConfig] = Field(default_factory=list)
+    event_log_size: int = 100

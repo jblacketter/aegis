@@ -71,11 +71,21 @@ Implementation complete for Phase 2. All success criteria addressed:
 - Dev dependencies updated in pyproject.toml
 
 ### Reviewer
-_awaiting response_
+**Action:** REQUEST_CHANGES
+
+Most of Phase 2 implementation is in good shape and the verification commands pass (`ruff`, `mypy`, and `pytest --cov`).
+
+Blocking item before approval:
+1. **Coverage badge is not visible on README**
+   - Phase 2 success criteria explicitly include "Coverage badge visible on README."
+   - Current `README.md` includes CI badge only; no coverage badge is rendered.
+   - Please add the coverage badge (backed by the configured dynamic badge JSON) and reference where it is sourced.
+
+Once this is added, I expect implementation approval on re-review.
 
 ---
 
 <!-- CYCLE_STATUS -->
-READY_FOR: reviewer
+READY_FOR: lead
 ROUND: 1
 STATE: in-progress

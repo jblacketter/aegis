@@ -16,6 +16,8 @@ class StepResult:
     data: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
     skipped: bool = False
+    duration_ms: float | None = None
+    attempts: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def has_failures(self) -> bool:
@@ -53,6 +55,8 @@ class WorkflowResult:
                     "skipped": s.skipped,
                     "data": s.data,
                     "error": s.error,
+                    "duration_ms": s.duration_ms,
+                    "attempts": s.attempts,
                 }
                 for s in self.steps
             ],

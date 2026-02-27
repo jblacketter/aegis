@@ -7,6 +7,30 @@ llm:
   default_model: qwen2.5-coder:7b
   timeout: 120
 
+# Optional API key authentication
+# When set, POST endpoints require X-API-Key header
+auth:
+  api_key: ""  # empty = auth disabled; use ${AEGIS_API_KEY} for env var
+
+# SQLite execution history
+history_db_path: aegis_history.db
+history_max_records: 0  # 0 = unlimited; set to e.g. 100 to auto-prune old records
+
+# Event system
+event_log_size: 100  # max events in the in-memory ring buffer
+
+# Webhook delivery (fire-and-forget)
+# Each webhook receives POST with JSON payload when matching events fire.
+# Events matching: exact match only, plus "*" for all events.
+# webhooks:
+#   - url: https://hooks.slack.com/services/T.../B.../xxx
+#     events: ["workflow.completed", "failure.detected"]
+#     secret: ""  # optional HMAC-SHA256 signing key; use ${WEBHOOK_SECRET} for env var
+#   - url: https://api.github.com/repos/owner/repo/dispatches
+#     events: ["*"]
+#     secret: ${GITHUB_WEBHOOK_SECRET}
+webhooks: []
+
 services:
   qaagent:
     name: "QA Agent"
@@ -40,6 +64,26 @@ workflows:
         service: qaagent
       - type: test
         service: qaagent
+        retries: 2             # retry up to 2 times on failure
+        retry_delay: 1.0       # base delay in seconds (exponential backoff)
+        timeout: 60.0          # per-step timeout in seconds
       - type: submit_bugs
         service: bugalizer
         condition: has_failures
+      - type: verify
+        service: qaagent
+        condition: has_failures
+        timeout: 45.0
+
+  # Example: parallel steps run concurrently via asyncio.gather()
+  # parallel_example:
+  #   name: "Parallel Discovery"
+  #   steps:
+  #     - type: discover
+  #       service: qaagent
+  #       parallel: true
+  #     - type: discover
+  #       service: another_service
+  #       parallel: true
+  #     - type: test              # sequential — flushes the parallel batch
+  #       service: qaagent

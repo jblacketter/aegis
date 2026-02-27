@@ -20,7 +20,7 @@ _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
 def _interpolate_env(value: str) -> str:
     """Replace ${VAR} and ${VAR:-default} patterns with environment values."""
 
-    def _replace(match: re.Match) -> str:
+    def _replace(match: re.Match[str]) -> str:
         expr = match.group(1)
         if ":-" in expr:
             var_name, default = expr.split(":-", 1)

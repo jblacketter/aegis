@@ -75,6 +75,27 @@
     return '<span class="status-badge ' + cls + '">' + status + "</span>";
   }
 
+  function relativeTime(isoString) {
+    if (!isoString) return "";
+    var now = new Date();
+    var then = new Date(isoString);
+    var diffMs = now - then;
+    var diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return diffSec + "s ago";
+    var diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return diffMin + "m ago";
+    var diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return diffHr + "h ago";
+    var diffDay = Math.floor(diffHr / 24);
+    return diffDay + "d ago";
+  }
+
+  function formatDuration(ms) {
+    if (ms == null) return "";
+    if (ms < 1000) return Math.round(ms) + "ms";
+    return (ms / 1000).toFixed(1) + "s";
+  }
+
   // ─── Renderers ───
 
   function renderToolCard(tool, serviceInfo) {
@@ -156,6 +177,23 @@
     );
   }
 
+  function renderRunRow(run) {
+    var statusCls = run.success ? "run-status-pass" : "run-status-fail";
+    var statusText = run.success ? "pass" : "fail";
+
+    return (
+      '<div class="run-row">' +
+      '<span class="run-status ' + statusCls + '">' + statusText + "</span>" +
+      '<span class="run-name">' + run.workflow_name + "</span>" +
+      '<span class="run-meta">' +
+      '<span class="run-steps">' + (run.step_count || 0) + " steps</span>" +
+      "<span>" + formatDuration(run.duration_ms) + "</span>" +
+      "<span>" + relativeTime(run.started_at) + "</span>" +
+      "</span>" +
+      "</div>"
+    );
+  }
+
   // ─── Render page ───
 
   function renderPage(portfolio, services, workflows) {
@@ -197,17 +235,93 @@
     }
   }
 
+  function renderRuns(runs) {
+    var runsList = document.getElementById("runs-list");
+    if (!runsList) return;
+    if (runs && runs.length > 0) {
+      runsList.innerHTML = runs.map(renderRunRow).join("");
+    } else {
+      runsList.innerHTML =
+        '<p class="runs-empty">No execution history available.</p>';
+    }
+  }
+
+  var EVENT_ICONS = {
+    "workflow.started": "▶",
+    "step.completed": "✓",
+    "workflow.completed": "✔",
+    "failure.detected": "✗",
+  };
+
+  function renderEventRow(evt) {
+    var icon = EVENT_ICONS[evt.event_type] || "•";
+    var isFailure = evt.event_type === "failure.detected" ||
+      (evt.data && evt.data.success === false);
+    var iconCls = isFailure ? "event-icon-fail" : "event-icon-ok";
+
+    return (
+      '<div class="event-row">' +
+      '<span class="event-icon ' + iconCls + '">' + icon + "</span>" +
+      '<span class="event-type">' + evt.event_type + "</span>" +
+      '<span class="event-workflow">' + evt.workflow_name + "</span>" +
+      '<span class="event-time">' + relativeTime(evt.timestamp) + "</span>" +
+      "</div>"
+    );
+  }
+
+  function renderEvents(events) {
+    var eventsList = document.getElementById("events-list");
+    if (!eventsList) return;
+    if (events && events.length > 0) {
+      eventsList.innerHTML = events.map(renderEventRow).join("");
+    } else {
+      eventsList.innerHTML =
+        '<p class="events-empty">No recent events.</p>';
+    }
+  }
+
+  function buildWorkflowMap(workflowList) {
+    var map = {};
+    workflowList.forEach(function (wf) {
+      map[wf.key] = wf;
+    });
+    return map;
+  }
+
   // ─── Init ───
 
   function init() {
     // Try live API first, fall back to static data
-    Promise.all([fetchJSON("/api/portfolio"), fetchJSON("/api/services")])
+    Promise.all([
+      fetchJSON("/api/portfolio"),
+      fetchJSON("/api/services"),
+      fetchJSON("/api/workflows"),
+    ])
       .then(function (results) {
-        renderPage(results[0], results[1], STATIC_WORKFLOWS);
+        var workflows = buildWorkflowMap(results[2]);
+        renderPage(results[0], results[1], workflows);
       })
       .catch(function () {
         // API not available — render with static fallback
         renderPage(STATIC_PORTFOLIO, null, STATIC_WORKFLOWS);
+      });
+
+    // Fetch recent runs (separate call — graceful failure)
+    fetchJSON("/api/history")
+      .then(function (runs) {
+        renderRuns(runs);
+      })
+      .catch(function () {
+        // No history available — leave default "no history" message
+      });
+
+    // Fetch recent events (separate call — graceful failure)
+    fetchJSON("/api/events?limit=5")
+      .then(function (events) {
+        renderEvents(events);
+      })
+      .catch(function () {
+        // No events available — leave default message
       });
   }
 

@@ -70,6 +70,7 @@ def run_workflow(
 ) -> None:
     """Execute a named workflow pipeline."""
     from aegis_qa.config.loader import load_config
+    from aegis_qa.events.emitter import create_cli_emitter
     from aegis_qa.workflows.pipeline import PipelineRunner
 
     try:
@@ -83,7 +84,8 @@ def run_workflow(
         console.print(f"Available: {', '.join(config.workflows.keys()) or 'none'}")
         raise typer.Exit(1)
 
-    runner = PipelineRunner(config)
+    emitter = create_cli_emitter(config)
+    runner = PipelineRunner(config, emitter=emitter)
     result = asyncio.run(runner.run(workflow))
 
     console.print(f"\n[bold]Workflow:[/bold] {result.workflow_name}")
@@ -109,6 +111,77 @@ def run_workflow(
 
 config_app = typer.Typer(name="config", help="Configuration commands")
 app.add_typer(config_app)
+
+
+@config_app.command("validate")
+def config_validate(
+    path: Path | None = typer.Option(None, "--path", "-p", help="Path to .aegis.yaml"),
+) -> None:
+    """Validate configuration file."""
+    from urllib.parse import urlparse
+
+    import yaml
+
+    from aegis_qa.config.loader import load_config
+    from aegis_qa.workflows.steps import STEP_REGISTRY
+
+    errors: list[str] = []
+    try:
+        config = load_config(path=path)
+        console.print("[green]\u2713[/green] YAML parses correctly")
+        console.print("[green]\u2713[/green] Pydantic validation passes")
+    except FileNotFoundError as exc:
+        console.print(f"[red]\u2717 {exc}[/red]")
+        raise typer.Exit(1)
+    except yaml.YAMLError as exc:
+        console.print(f"[red]\u2717 YAML parsing failed: {exc}[/red]")
+        raise typer.Exit(1)
+    except ValueError as exc:
+        console.print("[green]\u2713[/green] YAML parses correctly")
+        console.print(f"[red]\u2717 Pydantic validation failed: {exc}[/red]")
+        raise typer.Exit(1)
+
+    # Check service URLs are valid
+    for key, entry in config.services.items():
+        parsed = urlparse(entry.url)
+        if not parsed.scheme or not parsed.netloc:
+            errors.append(f"Service '{key}': invalid URL '{entry.url}'")
+        else:
+            console.print(f"[green]\u2713[/green] Service '{key}' URL is valid")
+
+    # Check workflow step services exist
+    for wf_key, wf in config.workflows.items():
+        for i, step in enumerate(wf.steps):
+            if step.service not in config.services:
+                errors.append(f"Workflow '{wf_key}' step {i} references unknown service '{step.service}'")
+
+            if step.type not in STEP_REGISTRY:
+                errors.append(f"Workflow '{wf_key}' step {i} references unknown step type '{step.type}'")
+
+    # Check webhook config
+    known_event_types = {"workflow.started", "step.completed", "workflow.completed", "failure.detected", "*"}
+    warnings: list[str] = []
+    for i, wh in enumerate(config.webhooks):
+        parsed = urlparse(wh.url)
+        if not parsed.scheme or not parsed.netloc:
+            errors.append(f"Webhook {i}: invalid URL '{wh.url}'")
+        for evt in wh.events:
+            if evt not in known_event_types:
+                warnings.append(f"Webhook {i}: unrecognized event type '{evt}'")
+
+    if not errors:
+        console.print("[green]\u2713[/green] All workflow step services exist")
+        console.print("[green]\u2713[/green] All workflow step types exist")
+        if config.webhooks:
+            console.print(f"[green]\u2713[/green] {len(config.webhooks)} webhook(s) configured")
+        for w in warnings:
+            console.print(f"[yellow]! {w}[/yellow]")
+        console.print("\n[green bold]Configuration is valid.[/green bold]")
+    else:
+        for err in errors:
+            console.print(f"[red]\u2717 {err}[/red]")
+        console.print(f"\n[red bold]{len(errors)} validation error(s) found.[/red bold]")
+        raise typer.Exit(1)
 
 
 @config_app.command("show")

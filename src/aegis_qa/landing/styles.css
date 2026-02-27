@@ -420,6 +420,139 @@ h2 {
   font-size: 0.7rem;
 }
 
+/* ─── Recent Runs ─── */
+
+.runs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.runs-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 16px;
+  text-align: center;
+}
+
+.run-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: border-color 0.2s;
+}
+
+.run-row:hover {
+  border-color: var(--accent);
+}
+
+.run-status {
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.run-status-pass {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.run-status-fail {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
+.run-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.run-meta {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.run-steps {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.75rem;
+}
+
+/* ─── Recent Events ─── */
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.events-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 16px;
+  text-align: center;
+}
+
+.event-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: border-color 0.2s;
+}
+
+.event-row:hover {
+  border-color: var(--accent);
+}
+
+.event-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.event-icon-ok {
+  color: var(--green);
+}
+
+.event-icon-fail {
+  color: var(--red);
+}
+
+.event-type {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.8rem;
+  color: var(--accent-light);
+  flex-shrink: 0;
+}
+
+.event-workflow {
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.event-time {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
 /* ─── Footer ─── */
 
 .footer {
